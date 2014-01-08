@@ -53,18 +53,22 @@ list<Diff*> diffs;
 
 void cmp_files(string text1, int N, string text2, int M,int updown)
 {
-	/*if(N==0 && M>0)
-	{
-	   diffs.push_back(new Diff(INSERT, text2));
-		return;
-	}
+	
 	if(M==0 && N>0)
 	{
 		diffs.push_back(new Diff(DELETE, text1));
+		cout<<"--------->>>>>>"<<text1<<endl;
 		return;
-	}*/
-	if(N<=0 || M<=0)
+	}
+	if(N==0 && M>0)
+	{
+		diffs.push_back(new Diff(INSERT, text2));
+		cout<<"+++++++>>>>>>>>>"<<text2<<endl;
 		return;
+	}
+	if(N<=0 && M<=0)
+		return;
+
 	
 
 #ifdef _DEBUG_
@@ -155,19 +159,34 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 #endif
 						
 						cmp_files(text1a,text1a.size(),text2a,text2a.size(),1);
-						diffs.push_back(new Diff(EQUAL, text1.substr(xMid,xEnd-xMid)));
+
+						
+						if(d != 0 &&yMid == yStart )//move right -->
+						{
+							diffs.push_back(new Diff(DELETE,text1.substr(xMid-1,1)));
+							cout<<"---------------"<<text1[xMid-1]<<"---------"<<endl;
+						}
+						if(d != 0 && xMid == xStart)//move down
+						{
+							diffs.push_back(new Diff(INSERT,text2.substr(yMid-1,1)));
+							cout<<"+++++++++++++++"<<text2[yMid-1]<<"+++++++++++"<<endl;
+						}
+						if(!text1.substr(xMid,xEnd-xMid).empty())// odd 部分，EQUAL 在DELETE,INSERT之后，而even部分在之前
+							diffs.push_back(new Diff(EQUAL, text1.substr(xMid,xEnd-xMid)));
+						
 #ifdef _DEBUG_
-						cout<<"D>1++++++++++++="<<text1.substr(xMid,xEnd-xMid)<<"=++++++++++++"<<endl;
+						cout<<"D>1============="<<text1.substr(xMid,xEnd-xMid)<<"============"<<endl;
 #endif
 						//diffs.push_back(new Diff(INSERT, text2));
 						cmp_files(text1b,text1b.size(),text2b,text2b.size(),2);
 					}
+
 					else if(D ==0)
 					{
 						diffs.push_back(new Diff(EQUAL, text1));
 						//text2=text1="";
 #ifdef _DEBUG_
-						cout<<"D=0++++++++++++="<<text1<<"=++++++++++++"<<endl;
+						cout<<"D=0============="<<text1<<"=========="<<endl;
 #endif
 					}
 					return;
@@ -251,11 +270,25 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 						
 						cmp_files(text1a,text1a.size(),text2a,text2a.size(),1);
 						//cout<<"here1"<<endl;
+
 						string temp = text1.substr(xEnd,xMid-xEnd);
 						if(!temp.empty())
-						diffs.push_back(new Diff(EQUAL, temp));
+							diffs.push_back(new Diff(EQUAL, temp));
+
+
+						if(d != 0 && yMid == yStart)//move left,d==0 locate at(0,0)
+						{
+							diffs.push_back(new Diff(DELETE,text1.substr(xStart-1,1)));
+							cout<<"-------------"<<text1[xStart-1]<<"-----------"<<endl;
+						}
+						if(d != 0 && xMid == xStart)//move up
+						{
+							diffs.push_back(new Diff(INSERT,text2.substr(yStart-1,1)));
+							cout<<"++++++++++++"<<text2[yStart-1]<<"++++++++++++++"<<endl;
+						}
+						
 #ifdef _DEBUG_
-						cout<<"D>1++++++++++++="<<temp<<"=++++++++++++"<<endl;
+						cout<<"D>1============"<<temp<<"============="<<endl;
 #endif
 						//diffs.push_back(new Diff(INSERT, text2));
 						cmp_files(text1b,text1b.size(),text2b,text2b.size(),2);
@@ -302,7 +335,13 @@ int main()
 	cout<<"--------------------"<<endl;
 	for(;it != diffs.end(); it++)
 	{
-		cout<<(*it)->text;
+		if((*it)->operation == INSERT)
+			cout<<"+";
+		else if((*it)->operation == DELETE)
+			cout<<"-";
+		else 
+			cout<<"=";
+		cout<<(*it)->text<<endl;
 	}
 
 	cout<<"\n--------------------"<<endl;
