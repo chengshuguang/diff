@@ -1,5 +1,5 @@
-//问题：babbaba aaaaaa
-//      aaaaaa bababaaaaa
+//问题：比如：dd,123456dd,,,,d,123456d
+//办法：每次自动检查相同的前缀和后缀
 
 #include <iostream>
 #include <string>
@@ -28,46 +28,88 @@ public:
 	}
 };
 
-class Snake
-{
-public:
-	int bx;
-	int by;
-	int mx;
-	int my;
-	int ex;
-	int ey;
-	Snake(){}
-	Snake(int _bx, int _by, int _mx, int _my, int _ex, int _ey)
-	{
-		bx = _bx;
-		by = _by;
-		mx = _mx;
-		my = _my;
-		ex = _ex;
-		ey = _ey;
-	}
-};
-
 list<Diff*> diffs;
 
 void cmp_files(string text1, int N, string text2, int M,int updown)
 {
-	
+	//cout<<text1<<">>>>1>>>>"<<text2<<endl;
+	bool flag = false;
+	string push_end="";
+	if(N!=0&&M!=0)
+	{
+		int i=0,j;
+		
+		while(i<N&&i<M && text1[i]==text2[i])//去掉共同前缀
+		{
+			i++;
+			flag = true;
+		}
+		if(flag)
+		{
+			diffs.push_back(new Diff(EQUAL,text1.substr(0,i)));
+		
+			text1=text1.substr(i);
+			text2=text2.substr(i);//前后缀没有加到diffs
+			N=text1.size();
+			M=text2.size();
+			//cout<<text1<<">>>>2>>>>"<<text2<<endl;
+		}
+		
+
+
+		 i=N;j=M;
+		 flag = false;
+		while(i>0&&j>0 && text1[i-1]==text2[j-1])//去掉共同后缀
+		{
+			//cout<<text1[i-1]<<"=="<<text2[j-1]<<endl;
+			i--;j--;
+			flag=true;
+		}
+		//cout<<i<<" "<<j<<endl;
+		
+		
+		if(flag)
+		{
+			push_end = text1.substr(i);
+			//cout<<push_end<<"^^^^^^^^^^^^^^^^^^^^^^^^^^^"<<endl;
+		
+			text1=text1.substr(0,i);
+			text2=text2.substr(0,j);
+			N=text1.size();
+			M=text2.size();
+		}
+	}
+	//cout<<text1<<">>>>>3>>>"<<text2<<endl;
+	//cout<<"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
 	if(M==0 && N>0)
 	{
 		diffs.push_back(new Diff(DELETE, text1));
-		cout<<"--------->>>>>>"<<text1<<endl;
+		//cout<<"--------->>>>>>"<<text1<<endl;
+		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		{
+			diffs.push_back(new Diff(EQUAL,push_end));
+		}
 		return;
 	}
 	if(N==0 && M>0)
 	{
 		diffs.push_back(new Diff(INSERT, text2));
-		cout<<"+++++++>>>>>>>>>"<<text2<<endl;
+		//cout<<"+++++++>>>>>>>>>"<<text2<<endl;
+		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		{
+			diffs.push_back(new Diff(EQUAL,push_end));
+		}
 		return;
 	}
 	if(N<=0 && M<=0)
-		return;
+	{
+		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		{
+			diffs.push_back(new Diff(EQUAL,push_end));
+		}
+		return ;
+	}
+		
 
 	
 
@@ -189,6 +231,10 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 						cout<<"D=0============="<<text1<<"=========="<<endl;
 #endif
 					}
+					if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+					{
+						diffs.push_back(new Diff(EQUAL,push_end));
+					}
 					return;
 					//***********************************
 				}
@@ -307,6 +353,10 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 						//cout<<"here3"<<endl;
 					}
 					//cout<<"here4"<<endl;
+					if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+					{
+						diffs.push_back(new Diff(EQUAL,push_end));
+					}
 					return;
 					//***********************************
 				}
