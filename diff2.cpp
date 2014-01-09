@@ -4,11 +4,21 @@
 #include <iostream>
 #include <string>
 #include <list>
+#include <fstream>
+#include <vector>
+#include <map>
 #include <ctime>
 
 //#define _DEBUG_
 
 using namespace std;
+
+
+vector<string>FileLineVector1;
+vector<string>FileLineVector2;
+//map<string,int> mapStringToInt;
+//int mapSize = 0;
+//map<string,int> mapStringToInt2;
 
 enum Operation
 {
@@ -19,22 +29,36 @@ class Diff
 {
 public:
 	Operation operation;
-	string text;
+	vector<string> text;
 	Diff(){}
-	Diff(Operation _operation, string _text)
+	Diff(Operation _operation, vector<string> _text)
 	{
 		operation = _operation;
 		text = _text;
 	}
 };
-
 list<Diff*> diffs;
 
-void cmp_files(string text1, int N, string text2, int M,int updown)
+vector<string> subvector(vector<string>&V,int b, size_t num)
+{
+	if(num>V.size()-b)
+		num = V.size() - b;
+	vector<string>::iterator it = V.begin();
+	vector<string> temp_vector(it+b, it+b+num);
+	return temp_vector;
+}
+vector<string> subvector(vector<string>&V,int b)
+{
+	vector<string>::iterator it = V.begin();
+	vector<string> temp_vector(it+b, V.end());
+	return temp_vector;
+}
+
+void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updown)
 {
 	//cout<<text1<<">>>>1>>>>"<<text2<<endl;
 	bool flag = false;
-	string push_end="";
+	vector<string> push_end;
 	if(N!=0&&M!=0)
 	{
 		int i=0,j;
@@ -46,10 +70,11 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 		}
 		if(flag)
 		{
-			diffs.push_back(new Diff(EQUAL,text1.substr(0,i)));
-		
-			text1=text1.substr(i);
-			text2=text2.substr(i);//前后缀没有加到diffs
+			diffs.push_back(new Diff(EQUAL,subvector(text1,0,i)));
+			
+
+			text1=subvector(text1,i);
+			text2=subvector(text2,i);//前后缀没有加到diffs
 			N=text1.size();
 			M=text2.size();
 			//cout<<text1<<">>>>2>>>>"<<text2<<endl;
@@ -70,11 +95,11 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 		
 		if(flag)
 		{
-			push_end = text1.substr(i);
+			push_end = subvector(text1,i);
 			//cout<<push_end<<"^^^^^^^^^^^^^^^^^^^^^^^^^^^"<<endl;
 		
-			text1=text1.substr(0,i);
-			text2=text2.substr(0,j);
+			text1=subvector(text1,0,i);
+			text2=subvector(text2,0,j);
 			N=text1.size();
 			M=text2.size();
 		}
@@ -184,15 +209,11 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 #endif
 					if(D >= 1)
 					{
-						string text1a = text1.substr(0,xStart);
-						string text1b = "";
-						if(xEnd<N)
-							text1b= text1.substr(xEnd);
-						string text2a = text2.substr(0,yStart);
+						vector<string> text1a = subvector(text1,0,xStart);//text1.substr(0,xStart);
+						vector<string> text1b= subvector(text1,xEnd);
+						vector<string> text2a = subvector(text2,0,yStart);
 						
-						string text2b="";
-						if(yEnd<M)// 是M>>>>>>>>>>>>>>>>>>
-							text2b= text2.substr(yEnd);
+						vector<string> text2b= subvector(text2,yEnd);
 #ifdef _DEBUG_						
 						cout<<"t1a:"<<text1a<<"-"<<endl;
 						cout<<"t1b:"<<text1b<<"-"<<endl;
@@ -205,16 +226,16 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 						
 						if(d != 0 &&yMid == yStart )//move right -->
 						{
-							diffs.push_back(new Diff(DELETE,text1.substr(xMid-1,1)));
-							cout<<"---------------"<<text1[xMid-1]<<"---------"<<endl;
+							diffs.push_back(new Diff(DELETE,/*text1.substr(xMid-1,1)*/subvector(text1,xMid-1,1)));
+							//cout<<"---------------"<<text1[xMid-1]<<"---------"<<endl;
 						}
 						if(d != 0 && xMid == xStart)//move down
 						{
-							diffs.push_back(new Diff(INSERT,text2.substr(yMid-1,1)));
-							cout<<"+++++++++++++++"<<text2[yMid-1]<<"+++++++++++"<<endl;
+							diffs.push_back(new Diff(INSERT,/*text2.substr(yMid-1,1)*/subvector(text2,yMid-1,1)));
+							//cout<<"+++++++++++++++"<<text2[yMid-1]<<"+++++++++++"<<endl;
 						}
-						if(!text1.substr(xMid,xEnd-xMid).empty())// odd 部分，EQUAL 在DELETE,INSERT之后，而even部分在之前
-							diffs.push_back(new Diff(EQUAL, text1.substr(xMid,xEnd-xMid)));
+						if(!subvector(text1,xMid,xEnd-xMid).empty())// odd 部分，EQUAL 在DELETE,INSERT之后，而even部分在之前
+							diffs.push_back(new Diff(EQUAL, subvector(text1,xMid,xEnd-xMid)));
 						
 #ifdef _DEBUG_
 						cout<<"D>1============="<<text1.substr(xMid,xEnd-xMid)<<"============"<<endl;
@@ -302,10 +323,10 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 #ifdef _DEBUG_
 						cout<<xStart<<" "<<yStart<<" "<<xMid<<" "<<yMid<<" "<<xEnd<<" "<<yEnd<<endl;
 #endif
-						string text1a = text1.substr(0,xEnd);
-						string text1b = text1.substr(xStart);
-						string text2a = text2.substr(0,yEnd);
-						string text2b = text2.substr(yStart);
+						vector<string> text1a = subvector(text1,0,xEnd);//text1.substr(0,xEnd);
+						vector<string> text1b = subvector(text1,xStart);//text1.substr(xStart);
+						vector<string> text2a = subvector(text2,0,yEnd);//text2.substr(0,yEnd);
+						vector<string> text2b = subvector(text2,yStart);//text2.substr(yStart);
 #ifdef _DEBUG_
 						cout<<"t1a:"<<text1a<<"-"<<endl;
 						cout<<"t1b:"<<text1b<<"-"<<endl;
@@ -317,20 +338,20 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 						cmp_files(text1a,text1a.size(),text2a,text2a.size(),1);
 						//cout<<"here1"<<endl;
 
-						string temp = text1.substr(xEnd,xMid-xEnd);
+						vector<string> temp = subvector(text1,xEnd,xMid-xEnd);//text1.substr(xEnd,xMid-xEnd);
 						if(!temp.empty())
 							diffs.push_back(new Diff(EQUAL, temp));
 
 
 						if(d != 0 && yMid == yStart)//move left,d==0 locate at(0,0)
 						{
-							diffs.push_back(new Diff(DELETE,text1.substr(xStart-1,1)));
-							cout<<"-------------"<<text1[xStart-1]<<"-----------"<<endl;
+							diffs.push_back(new Diff(DELETE,subvector(text1,xStart-1,1)/*text1.substr(xStart-1,1)*/));
+							//cout<<"-------------"<<text1[xStart-1]<<"-----------"<<endl;
 						}
 						if(d != 0 && xMid == xStart)//move up
 						{
-							diffs.push_back(new Diff(INSERT,text2.substr(yStart-1,1)));
-							cout<<"++++++++++++"<<text2[yStart-1]<<"++++++++++++++"<<endl;
+							diffs.push_back(new Diff(INSERT,subvector(text2,yStart-1,1)/*text2.substr(yStart-1,1)*/));
+							//cout<<"++++++++++++"<<text2[yStart-1]<<"++++++++++++++"<<endl;
 						}
 						
 #ifdef _DEBUG_
@@ -366,32 +387,61 @@ void cmp_files(string text1, int N, string text2, int M,int updown)
 
 }
 
+void FileRead(string FileName, vector<string>&FileLineVector) 
+{
+	// 这个函数是基于流的方式,速度也比较快
+	if (FileLineVector.size() > 0)
+	{
+		FileLineVector.clear();
+	}
+	ifstream fin(FileName.c_str());
+	if (!fin.bad()) 
+	{
+		string sLine; // 行字符串
+		while (getline(fin, sLine)) {
+			//if(sLine.empty())//去除空行
+				//continue;
+			FileLineVector.push_back(sLine);
+		}
+	}
+	fin.close();
+}
+
+
 //for debug
 int main()
 {
     string a,b;
-	freopen("in.txt","r",stdin);
+	/*freopen("in.txt","r",stdin);
 	cin>>a;
 	freopen("in2.txt","r",stdin);
-    cin>>b;
-	cout<<a.size()<<"     "<<b.size()<<endl;
+    cin>>b;*/
+	FileRead("in.txt",FileLineVector1);
+	FileRead("in2.txt",FileLineVector2);
+
+	//cout<<"mapsize:"<<mapSize<<endl;
+	//return 0;
+	//cout<<a.size()<<"     "<<b.size()<<endl;
 	clock_t begin,end;
 	begin = clock();
-	cmp_files(a,a.size(),b,b.size(),0);
+	cmp_files(FileLineVector1,FileLineVector1.size(),FileLineVector2,FileLineVector2.size(),0);
 	end = clock();
 	cout<<end-begin<<endl;
-
+	freopen("out.java","w",stdout);
 	list<Diff*>::iterator it = diffs.begin();
 	cout<<"--------------------"<<endl;
 	for(;it != diffs.end(); it++)
-	{
-		if((*it)->operation == INSERT)
-			cout<<"+";
-		else if((*it)->operation == DELETE)
-			cout<<"-";
-		else 
-			cout<<"=";
-		cout<<(*it)->text<<endl;
+	{	
+		for(int i=0; i<(*it)->text.size();i++)
+		{
+			if((*it)->operation == INSERT)
+				cout<<"+|";
+			else if((*it)->operation == DELETE)
+				cout<<"-|";
+			else 
+				cout<<" |";
+			cout<<(*it)->text[i]<<endl;
+		}
 	}
 
 	cout<<"\n--------------------"<<endl;
