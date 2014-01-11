@@ -1,6 +1,7 @@
 //改进地方: 1.当访问到边界时，k的值范围也可以缩小了,见neil的算法实现
 //         2.++++----+++不能顺序的先+后-
 //		   3.空行也匹配了，那么就出现了问题，可能空行很多，导致优先匹配了空行而忽略掉非空行的匹配
+//         4.结果空行影响输出美观直观，++-- --++中间的空行却隔开了联系在一起的东西，对结果处理空行
 
 #include <iostream>
 #include <fstream>
@@ -112,22 +113,27 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 
 	int *V1;
 	int *V2;
-	int base = max_d;
+	int base = 2*max_d;//??????????????忘记*2，悲剧了
 
-	V1 = new int[4*max_d+1];
+	V1 = new int[4*max_d+1];//4???????????????????????????????????????????
 	V2 = new int[4*max_d+1];
 
 	for(int i=0;i<=4*max_d;i++)
 	{
-		V1[i] = numeric_limits<int>::min();
-		V2[i] = numeric_limits<int>::min();
+		V1[i] = -99999;//numeric_limits<int>::min();
+		V2[i] = -99999;//numeric_limits<int>::min();
 	}
 
   	V1[base+1]=0;
   	V2[base+1]=0;
+	int k1start = 0;
+	int k1end = 0;
+	int k2start = 0;
+	int k2end =0;
+
 	for(int d=0; d<=max_d; d++)
 	{
-		for(int k=-d; k<=d; k+=2)
+		for(int k=-d+k1start; k<=d-k1end; k+=2)
 		{
 			bool down = ( k == -d || ( k != d && V1[base+ k - 1 ] < V1[base+ k + 1 ] ) );
 
@@ -150,11 +156,22 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 			{ xEnd++; yEnd++; }
 
 			V1[base+ k ] = xEnd;
-
-			if((delta%2)!=0 && (k>= delta - (d-1) && k <= delta + (d-1)))
+			//去掉这个。。。。。。。。。。。。。。。就可以了。。。。。。。为什么啊
+			/*if(xEnd > N)
 			{
-				
+			k1end+=2;
+			}
+			else if(yEnd > M)
+			{
+			k1start+=2;
+			}*/
+			//cout<<"V1["<<k<<"]="<<xEnd<<endl;
+			//delta其实就是反方向的k=0的在正方向看来的k值
+		    if((delta%2)!=0 && (k>= delta - (d-1) && k <= delta + (d-1)) && V2[base + delta-k]!=-99999)//去掉了后面这个限制条件就会出错，为什么？？？？？
+			{
 				int r_xEnd = N - V2[base + delta-k];
+				//cout<<"v2[base+delata-k]="<<V2[base + delta-k]<<endl;
+				//cout<<"1-->>"<<delta<<"-"<<k<<"="<<delta-k<<" == "<<xEnd<<"<="<<r_xEnd<<endl;
 				if(xEnd >= r_xEnd)
 				{
 					delete [] V1;
@@ -163,6 +180,7 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 
 					if(D >= 1)
 					{
+						//cout<<xStart<<" "<<yStart<<" "<<xMid<<" "<<yMid<<" "<<xEnd<<" "<<yEnd<<endl;
 						wstring text1a = text1.substr(0,xStart);
 						wstring text1b;
 						if(xEnd<N)
@@ -205,7 +223,7 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 
 		}
 
-		for(int k=-d; k<=d; k+=2)
+		for(int k=-d+k2start; k<=d-k2start; k+=2)
 		{
 			bool down = ( k == -d || ( k != d && V2[base+ k - 1 ] < V2[base+ k + 1 ] ) );
 
@@ -229,12 +247,23 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 			{ xEnd++; yEnd++; }
 
 			V2[base+ k] = xEnd;
-
-			if((delta%2)==0 && (k>= -d && k <= d ))//去掉了delta
+			//if(xEnd>N)
+			//{
+			//	k2end+=2;
+			//}
+			//else if(yEnd>M)
+			//{
+			//	k2start+=2;
+			//}
+			////cout<<"V2["<<k<<"]="<<N-xEnd<<endl;
+			//else 
+			if((delta%2)==0 && V1[base + delta-k]!=-99999 &&(k>=delta-d&&k<=delta+d))//，这个地方应该加一个限制条件
 			{
-				
-				int r_xEnd = V1[base + delta-k];
 
+				int r_xEnd = V1[base + delta-k];
+				//cout<<"v1[base+delata-k]="<<V1[base + delta-k]<<endl;
+				//int r_xEnd = V1[base + delta-k];//问题应该出现在这个地方。。。。。。。。
+				//cout<<"2-->>"<<delta<<"-"<<k<<"="<<delta-k<<" == "<<N-xEnd<<"<="<<r_xEnd<<endl;
 				if(N-xEnd <= r_xEnd)//<=???????
 				{
 					delete [] V1;
@@ -249,7 +278,7 @@ void cmp_files(wstring text1, int N, wstring text2, int M)
 						yEnd = M -yEnd;
 						xMid = N -xMid;
 						yMid = M -yMid;
-
+						//cout<<xStart<<" "<<yStart<<" "<<xMid<<" "<<yMid<<" "<<xEnd<<" "<<yEnd<<endl;
 						wstring text1a = text1.substr(0,xEnd);
 						wstring text1b = text1.substr(xStart);
 						wstring text2a = text2.substr(0,yEnd);
@@ -325,8 +354,7 @@ void FileRead(string FileName, wstring& file)
 //          的 + 号，也就是重新开始，如果遇到 -号（当然是在遇到=之前），则把
 //          该 - 的节点插入第一个+之前
 //时间复杂度：O(N)
-//std::list list.splice(it,list,it2),在it之前插入it2指向的元素，（相当于移位）
-//it2还是指向插入的那个元素
+//std::list list.splice(it,list,it2),在it之前插入it2指向的元素，（相当于移位）it2还是指向插入的那个元素
 //=======================================================================
 void sortDiffs()
 {
@@ -338,7 +366,7 @@ void sortDiffs()
 		if((*it)->operation == INSERT)
 		{
 			it2 = it++;
-			for(;it!=diffs.end();it++)
+			for(;it!=diffs.end();)
 			{
 				if((*it)->operation == EQUAL)
 				{
@@ -346,18 +374,57 @@ void sortDiffs()
 				}
 				else if((*it)->operation == INSERT)
 				{
+					it++;
 					continue;
 				}
 				else
 				{
 					it3 = it;
+					it++;
 					diffs.splice(it2,diffs,it3);
 				}
 			}
 		}
+		if(it==diffs.end())
+			break;
 	}
 	
 }
+ 
+//void postProcess()//处理空格     
+//{
+//	list<Diff*>::iterator it;
+//	list<Diff*>::iterator it2;//+
+//	list<Diff*>::iterator it3;//-
+//	for(it = diffs.begin();it != diffs.end(); it++)
+//	{
+//		if((*it)->operation == INSERT || (*it)->operation == DELETE)
+//		{
+//			it2 = it++;
+//			for(;it!=diffs.end();)
+//			{
+//				//intToString[int((*it)->text)];
+//				if((*it)->operation == EQUAL)
+//				{
+//					break;
+//				}
+//				else if((*it)->operation == INSERT)
+//				{
+//					it++;
+//					continue;
+//				}
+//				else
+//				{
+//					it3 = it;
+//					it++;
+//					diffs.splice(it2,diffs,it3);
+//				}
+//			}
+//		}
+//		if(it==diffs.end())
+//			break;
+//	}
+//}
 
 
 int main()
@@ -366,13 +433,13 @@ int main()
 	string filename2;
 	clock_t begin,end;
 	//begin = clock();
-	cout<<"输入第一个文件的路径：";
-	cin>>filename1;
-	FileRead(filename1,file1);
+	/*cout<<"输入第一个文件的路径：";
+	cin>>filename1;*/
+	FileRead("in.txt",file1);
 
-	cout<<"输入第二个文件的路径：";
-	cin>>filename2;
-	FileRead(filename2,file2);
+	/*cout<<"输入第二个文件的路径：";
+	cin>>filename2;*/
+	FileRead("in2.txt",file2);
 	//end = clock();
 	//cout<<end-begin<<endl;
 	
@@ -380,18 +447,16 @@ int main()
 	cmp_files(file1,file1.size(),file2,file2.size());
 	end = clock();
 	cout<<end-begin<<endl;
+	cout<<"first end"<<endl;
 
-	sortDiffs();//test???????
+	sortDiffs();//remanage the diff result
+	cout<<"second end"<<endl;
 
 	freopen("res.patch","w",stdout);
 	list<Diff*>::iterator it = diffs.begin();
 	cout<<"--------------------"<<endl;
 	for(;it != diffs.end(); it++)
 	{
-		//直接在diffs中，把-调到+之前，O(N)的时间复杂度
-		//here shoud be the sort code
-		//
-		//
 		for(int i=0; i<(*it)->text.size();i++)
 		{
 			if((*it)->operation == INSERT)
