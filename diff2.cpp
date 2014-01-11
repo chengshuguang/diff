@@ -1,24 +1,24 @@
-//问题：比如：dd,123456dd,,,,d,123456d
-//办法：每次自动检查相同的前缀和后缀
+//改进地方: 1.当访问到边界时，k的值范围也可以缩小了,见neil的算法实现
+//         2.++++----+++不能顺序的先+后-
+//		   3.空行也匹配了，那么就出现了问题，可能空行很多，导致优先匹配了空行而忽略掉非空行的匹配
 
 #include <iostream>
-#include <string>
-#include <list>
 #include <fstream>
+#include <string>
 #include <vector>
-#include <map>
+#include <limits>
 #include <ctime>
-
-//#define _DEBUG_
+#include <list>
+#include <map>
 
 using namespace std;
 
 
-vector<string>FileLineVector1;
-vector<string>FileLineVector2;
-//map<string,int> mapStringToInt;
-//int mapSize = 0;
-//map<string,int> mapStringToInt2;
+wstring file1;
+wstring file2;
+map<string,int> mapStringToInt;
+vector<string> intToString;
+
 
 enum Operation
 {
@@ -29,88 +29,61 @@ class Diff
 {
 public:
 	Operation operation;
-	vector<string> text;
+	wstring text;
 	Diff(){}
-	Diff(Operation _operation, vector<string> _text)
+	Diff(Operation _operation, wstring _text)
 	{
 		operation = _operation;
 		text = _text;
 	}
 };
+
 list<Diff*> diffs;
 
-vector<string> subvector(vector<string>&V,int b, size_t num)
+void cmp_files(wstring text1, int N, wstring text2, int M)
 {
-	if(num>V.size()-b)
-		num = V.size() - b;
-	vector<string>::iterator it = V.begin();
-	vector<string> temp_vector(it+b, it+b+num);
-	return temp_vector;
-}
-vector<string> subvector(vector<string>&V,int b)
-{
-	vector<string>::iterator it = V.begin();
-	vector<string> temp_vector(it+b, V.end());
-	return temp_vector;
-}
-
-void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updown)
-{
-	//cout<<text1<<">>>>1>>>>"<<text2<<endl;
-	bool flag = false;
-	vector<string> push_end;
+	bool hasCommSuffix = false;
+	wstring push_end;
 	if(N!=0&&M!=0)
 	{
 		int i=0,j;
 		
-		while(i<N&&i<M && text1[i]==text2[i])//去掉共同前缀
+		while(i<N&&i<M && text1[i]==text2[i])//去掉共同前缀    
 		{
 			i++;
-			flag = true;
+			hasCommSuffix = true;
 		}
-		if(flag)
+		if(hasCommSuffix)
 		{
-			diffs.push_back(new Diff(EQUAL,subvector(text1,0,i)));
-			
-
-			text1=subvector(text1,i);
-			text2=subvector(text2,i);//前后缀没有加到diffs
+			diffs.push_back(new Diff(EQUAL,text1.substr(0,i)));
+		
+			text1=text1.substr(i);
+			text2=text2.substr(i);
 			N=text1.size();
 			M=text2.size();
-			//cout<<text1<<">>>>2>>>>"<<text2<<endl;
 		}
 		
-
-
-		 i=N;j=M;
-		 flag = false;
-		while(i>0&&j>0 && text1[i-1]==text2[j-1])//去掉共同后缀
+		i=N;j=M;
+		hasCommSuffix = false;
+		while(i>0&&j>0 && text1[i-1]==text2[j-1])//去掉共同后缀    
 		{
-			//cout<<text1[i-1]<<"=="<<text2[j-1]<<endl;
 			i--;j--;
-			flag=true;
+			hasCommSuffix=true;
 		}
-		//cout<<i<<" "<<j<<endl;
 		
-		
-		if(flag)
+		if(hasCommSuffix)
 		{
-			push_end = subvector(text1,i);
-			//cout<<push_end<<"^^^^^^^^^^^^^^^^^^^^^^^^^^^"<<endl;
-		
-			text1=subvector(text1,0,i);
-			text2=subvector(text2,0,j);
+			push_end = text1.substr(i);
+			text1=text1.substr(0,i);
+			text2=text2.substr(0,j);
 			N=text1.size();
 			M=text2.size();
 		}
 	}
-	//cout<<text1<<">>>>>3>>>"<<text2<<endl;
-	//cout<<"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"<<endl;
 	if(M==0 && N>0)
 	{
 		diffs.push_back(new Diff(DELETE, text1));
-		//cout<<"--------->>>>>>"<<text1<<endl;
-		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		if(hasCommSuffix)
 		{
 			diffs.push_back(new Diff(EQUAL,push_end));
 		}
@@ -119,8 +92,7 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 	if(N==0 && M>0)
 	{
 		diffs.push_back(new Diff(INSERT, text2));
-		//cout<<"+++++++>>>>>>>>>"<<text2<<endl;
-		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		if(hasCommSuffix)
 		{
 			diffs.push_back(new Diff(EQUAL,push_end));
 		}
@@ -128,21 +100,13 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 	}
 	if(N<=0 && M<=0)
 	{
-		if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+		if(hasCommSuffix)
 		{
 			diffs.push_back(new Diff(EQUAL,push_end));
 		}
 		return ;
 	}
-		
 
-	
-
-#ifdef _DEBUG_
-	cout<<"---------"<<updown<<"---------"<<endl;
-	cout<<"text1:-"<<text1<<"-"<<endl;
-	cout<<"text2:-"<<text2<<"-"<<endl;
-#endif
 	int delta = N - M;
 	int max_d = (N + M + 1) /2;
 
@@ -153,10 +117,10 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 	V1 = new int[4*max_d+1];
 	V2 = new int[4*max_d+1];
 
-	for(int i=0;i<=4*max_d;i++)//初始化之后delete就不报错了，想不通。。。。。
+	for(int i=0;i<=4*max_d;i++)
 	{
-		V1[i]=-9999999;
-		V2[i]=-9999999;
+		V1[i] = numeric_limits<int>::min();
+		V2[i] = numeric_limits<int>::min();
 	}
 
   	V1[base+1]=0;
@@ -182,17 +146,10 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 			int yEnd = yMid;
 
 			// follow diagonal
-
 			while ( xEnd < N && yEnd < M && text1[ xEnd ] == text2[ yEnd ] )
 			{ xEnd++; yEnd++; }
-#ifdef _DEBUG_
-			cout<<d<<" odd "<<xEnd<<":"<<yEnd<<endl;
-#endif
 
 			V1[base+ k ] = xEnd;
-#ifdef _DEBUG_
-			cout<<"V1["<<k<<"]="<<xEnd<<endl;
-#endif
 
 			if((delta%2)!=0 && (k>= delta - (d-1) && k <= delta + (d-1)))
 			{
@@ -203,61 +160,46 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 					delete [] V1;
 					delete [] V2;
 					int D = 2*d -1;
-#ifdef _DEBUG_
-					cout<<"o********"<<D<<"  "<<((M+N)-D)/2<<endl;
-					cout<<xStart<<" "<<yStart<<" "<<xMid<<" "<<yMid<<" "<<xEnd<<" "<<yEnd<<endl;
-#endif
+
 					if(D >= 1)
 					{
-						vector<string> text1a = subvector(text1,0,xStart);//text1.substr(0,xStart);
-						vector<string> text1b= subvector(text1,xEnd);
-						vector<string> text2a = subvector(text2,0,yStart);
-						
-						vector<string> text2b= subvector(text2,yEnd);
-#ifdef _DEBUG_						
-						cout<<"t1a:"<<text1a<<"-"<<endl;
-						cout<<"t1b:"<<text1b<<"-"<<endl;
-						cout<<"t2a:"<<text2a<<"-"<<endl;
-						cout<<"t2b:"<<text2b<<"-"<<endl;
-#endif
-						
-						cmp_files(text1a,text1a.size(),text2a,text2a.size(),1);
+						wstring text1a = text1.substr(0,xStart);
+						wstring text1b;
+						if(xEnd<N)
+							text1b= text1.substr(xEnd);
+						wstring text2a = text2.substr(0,yStart);
 
+						wstring text2b;
+						if(yEnd<M)
+							text2b= text2.substr(yEnd);
+	
+						cmp_files(text1a,text1a.size(),text2a,text2a.size());
 						
-						if(d != 0 &&yMid == yStart )//move right -->
+						if(d != 0 &&yMid == yStart )//move right
 						{
-							diffs.push_back(new Diff(DELETE,/*text1.substr(xMid-1,1)*/subvector(text1,xMid-1,1)));
-							//cout<<"---------------"<<text1[xMid-1]<<"---------"<<endl;
+							diffs.push_back(new Diff(DELETE,text1.substr(xMid-1,1)));
 						}
+						//加一个else是否更好？
 						if(d != 0 && xMid == xStart)//move down
 						{
-							diffs.push_back(new Diff(INSERT,/*text2.substr(yMid-1,1)*/subvector(text2,yMid-1,1)));
-							//cout<<"+++++++++++++++"<<text2[yMid-1]<<"+++++++++++"<<endl;
+							diffs.push_back(new Diff(INSERT,text2.substr(yMid-1,1)));
 						}
-						if(!subvector(text1,xMid,xEnd-xMid).empty())// odd 部分，EQUAL 在DELETE,INSERT之后，而even部分在之前
-							diffs.push_back(new Diff(EQUAL, subvector(text1,xMid,xEnd-xMid)));
-						
-#ifdef _DEBUG_
-						cout<<"D>1============="<<text1.substr(xMid,xEnd-xMid)<<"============"<<endl;
-#endif
-						//diffs.push_back(new Diff(INSERT, text2));
-						cmp_files(text1b,text1b.size(),text2b,text2b.size(),2);
+						if(!text1.substr(xMid,xEnd-xMid).empty())// odd 部分，EQUAL 在DELETE,INSERT之后，而even部分在之前
+							diffs.push_back(new Diff(EQUAL, text1.substr(xMid,xEnd-xMid)));
+
+						cmp_files(text1b,text1b.size(),text2b,text2b.size());
 					}
 
 					else if(D ==0)
 					{
 						diffs.push_back(new Diff(EQUAL, text1));
-						//text2=text1="";
-#ifdef _DEBUG_
-						cout<<"D=0============="<<text1<<"=========="<<endl;
-#endif
+		
 					}
-					if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+					if(hasCommSuffix)
 					{
 						diffs.push_back(new Diff(EQUAL,push_end));
 					}
 					return;
-					//***********************************
 				}
 			}
 
@@ -285,33 +227,20 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 
 			while ( xEnd < N && yEnd < M && text1[N - xEnd -1] == text2[M - yEnd -1] )
 			{ xEnd++; yEnd++; }
-#ifdef _DEBUG_
-			cout<<d<<" eve "<<xEnd<<":"<<yEnd<<endl;
-#endif
+
 			V2[base+ k] = xEnd;
-#ifdef _DEBUG_
-			cout<<"V2["<<k<<"]="<<xEnd<<endl;
-#endif
 
 			if((delta%2)==0 && (k>= -d && k <= d ))//去掉了delta
 			{
 				
 				int r_xEnd = V1[base + delta-k];
-#ifdef _DEBUG_
-				cout<<delta<<"-"<<k<<"="<<delta-k<<" == "<<N-xEnd<<"<="<<r_xEnd<<endl;
-#endif
+
 				if(N-xEnd <= r_xEnd)//<=???????
 				{
-#ifdef _DEBUG_
-					cout<<"here even"<<endl;
-					cout<<V1[0]<<"+++"<<endl;
-#endif
 					delete [] V1;
 					delete [] V2;
 					int D = 2*d;
-#ifdef _DEBUG_
-					cout<<"e******"<<D<<" "<<((M+N)-D)/2<<endl;
-#endif
+
 					if(D >= 1)
 					{	
 						xStart = N - xStart;
@@ -320,66 +249,42 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 						yEnd = M -yEnd;
 						xMid = N -xMid;
 						yMid = M -yMid;
-#ifdef _DEBUG_
-						cout<<xStart<<" "<<yStart<<" "<<xMid<<" "<<yMid<<" "<<xEnd<<" "<<yEnd<<endl;
-#endif
-						vector<string> text1a = subvector(text1,0,xEnd);//text1.substr(0,xEnd);
-						vector<string> text1b = subvector(text1,xStart);//text1.substr(xStart);
-						vector<string> text2a = subvector(text2,0,yEnd);//text2.substr(0,yEnd);
-						vector<string> text2b = subvector(text2,yStart);//text2.substr(yStart);
-#ifdef _DEBUG_
-						cout<<"t1a:"<<text1a<<"-"<<endl;
-						cout<<"t1b:"<<text1b<<"-"<<endl;
-						cout<<"t2a:"<<text2a<<"-"<<endl;
-						cout<<"t2b:"<<text2b<<"-"<<endl;
-#endif
 
-						
-						cmp_files(text1a,text1a.size(),text2a,text2a.size(),1);
-						//cout<<"here1"<<endl;
+						wstring text1a = text1.substr(0,xEnd);
+						wstring text1b = text1.substr(xStart);
+						wstring text2a = text2.substr(0,yEnd);
+						wstring text2b = text2.substr(yStart);
+					
+						cmp_files(text1a,text1a.size(),text2a,text2a.size());
 
-						vector<string> temp = subvector(text1,xEnd,xMid-xEnd);//text1.substr(xEnd,xMid-xEnd);
+						wstring temp = text1.substr(xEnd,xMid-xEnd);
 						if(!temp.empty())
 							diffs.push_back(new Diff(EQUAL, temp));
+						
 
-
-						if(d != 0 && yMid == yStart)//move left,d==0 locate at(0,0)
-						{
-							diffs.push_back(new Diff(DELETE,subvector(text1,xStart-1,1)/*text1.substr(xStart-1,1)*/));
-							//cout<<"-------------"<<text1[xStart-1]<<"-----------"<<endl;
-						}
 						if(d != 0 && xMid == xStart)//move up
 						{
-							diffs.push_back(new Diff(INSERT,subvector(text2,yStart-1,1)/*text2.substr(yStart-1,1)*/));
-							//cout<<"++++++++++++"<<text2[yStart-1]<<"++++++++++++++"<<endl;
+							diffs.push_back(new Diff(INSERT,text2.substr(yStart-1,1)));
 						}
 						
-#ifdef _DEBUG_
-						cout<<"D>1============"<<temp<<"============="<<endl;
-#endif
-						//diffs.push_back(new Diff(INSERT, text2));
-						cmp_files(text1b,text1b.size(),text2b,text2b.size(),2);
-						//cout<<"here2"<<endl;
+						if(d != 0 && yMid == yStart)//move left,d==0 locate at(0,0)
+						{
+							diffs.push_back(new Diff(DELETE,text1.substr(xStart-1,1)));
+						}
+						cmp_files(text1b,text1b.size(),text2b,text2b.size());
 					}
 					else if(D ==0)
 					{
 						if(!text1.empty())
 						{
 							diffs.push_back(new Diff(EQUAL, text1));
-							//text2=text1="";
-#ifdef _DEBUG_
-							cout<<"D=0++++++++++++="<<text1<<"=++++++++++++"<<endl;
-#endif
 						}
-						//cout<<"here3"<<endl;
 					}
-					//cout<<"here4"<<endl;
-					if(flag)//push_end???????????????????????????????? 后缀加在这个地方才可以显示在正确的位置
+					if(hasCommSuffix)
 					{
 						diffs.push_back(new Diff(EQUAL,push_end));
 					}
 					return;
-					//***********************************
 				}
 			}
 		}
@@ -387,51 +292,106 @@ void cmp_files(vector<string> text1, int N, vector<string> text2, int M,int updo
 
 }
 
-void FileRead(string FileName, vector<string>&FileLineVector) 
+//能否用二进制读入，更快？有时间尝试一下
+void FileRead(string FileName, wstring& file) 
 {
 	// 这个函数是基于流的方式,速度也比较快
-	if (FileLineVector.size() > 0)
+	if (file.size() > 0)
 	{
-		FileLineVector.clear();
+		file.clear();
 	}
 	ifstream fin(FileName.c_str());
 	if (!fin.bad()) 
 	{
 		string sLine; // 行字符串
 		while (getline(fin, sLine)) {
-			//if(sLine.empty())//去除空行
-				//continue;
-			FileLineVector.push_back(sLine);
+			if(!mapStringToInt.count(sLine))
+			{
+				mapStringToInt[sLine] = mapStringToInt.size();
+				file+=(wchar_t(mapStringToInt.size()-1));//需不需要先转换程ushort?
+				intToString.push_back(sLine);
+			}
+			else
+			{
+				file+=(wchar_t(mapStringToInt[sLine]));
+			}
 		}
 	}
 	fin.close();
 }
+//=======================================================================
+//排序目的：使得+ + - + - + +这种情况变为- - + + + + +，即把 - 移动到 + 之前
+//算法描述：找到第一个+，然后向后遍历遇到 + 则继续遍历，遇到 = 则重新找到之后
+//          的 + 号，也就是重新开始，如果遇到 -号（当然是在遇到=之前），则把
+//          该 - 的节点插入第一个+之前
+//时间复杂度：O(N)
+//std::list list.splice(it,list,it2),在it之前插入it2指向的元素，（相当于移位）
+//it2还是指向插入的那个元素
+//=======================================================================
+void sortDiffs()
+{
+	list<Diff*>::iterator it;
+	list<Diff*>::iterator it2;//+
+	list<Diff*>::iterator it3;//-
+	for(it = diffs.begin();it != diffs.end(); it++)
+	{
+		if((*it)->operation == INSERT)
+		{
+			it2 = it++;
+			for(;it!=diffs.end();it++)
+			{
+				if((*it)->operation == EQUAL)
+				{
+					break;
+				}
+				else if((*it)->operation == INSERT)
+				{
+					continue;
+				}
+				else
+				{
+					it3 = it;
+					diffs.splice(it2,diffs,it3);
+				}
+			}
+		}
+	}
+	
+}
 
 
-//for debug
 int main()
 {
-    string a,b;
-	/*freopen("in.txt","r",stdin);
-	cin>>a;
-	freopen("in2.txt","r",stdin);
-    cin>>b;*/
-	FileRead("in.txt",FileLineVector1);
-	FileRead("in2.txt",FileLineVector2);
-
-	//cout<<"mapsize:"<<mapSize<<endl;
-	//return 0;
-	//cout<<a.size()<<"     "<<b.size()<<endl;
+	string filename1;
+	string filename2;
 	clock_t begin,end;
+	//begin = clock();
+	cout<<"输入第一个文件的路径：";
+	cin>>filename1;
+	FileRead(filename1,file1);
+
+	cout<<"输入第二个文件的路径：";
+	cin>>filename2;
+	FileRead(filename2,file2);
+	//end = clock();
+	//cout<<end-begin<<endl;
+	
 	begin = clock();
-	cmp_files(FileLineVector1,FileLineVector1.size(),FileLineVector2,FileLineVector2.size(),0);
+	cmp_files(file1,file1.size(),file2,file2.size());
 	end = clock();
 	cout<<end-begin<<endl;
-	freopen("out.java","w",stdout);
+
+	sortDiffs();//test???????
+
+	freopen("res.patch","w",stdout);
 	list<Diff*>::iterator it = diffs.begin();
 	cout<<"--------------------"<<endl;
 	for(;it != diffs.end(); it++)
-	{	
+	{
+		//直接在diffs中，把-调到+之前，O(N)的时间复杂度
+		//here shoud be the sort code
+		//
+		//
 		for(int i=0; i<(*it)->text.size();i++)
 		{
 			if((*it)->operation == INSERT)
@@ -440,11 +400,11 @@ int main()
 				cout<<"-|";
 			else 
 				cout<<" |";
-			cout<<(*it)->text[i]<<endl;
+			cout<<intToString[int((*it)->text[i])]<<endl;
 		}
 	}
 
-	cout<<"\n--------------------"<<endl;
+	cout<<"--------------------"<<endl;
 	return 0;
 }
 
